@@ -2,9 +2,9 @@
 
 The javaagent jar can logically be divided into 3 parts:
 
-* Modules that live in the system class loader
+* Modules that live in the system class loader  存在于系统类加载器中的模块
 * Modules that live in the bootstrap class loader
-* Modules that live in the agent class loader
+* Modules that live in the agent class loader  存在于代理类加载器中的模块
 
 ## Modules that live in the system class loader
 
@@ -20,12 +20,16 @@ classloader and immediately delegate to
 `io.opentelemetry.javaagent.bootstrap.AgentInitializer` (now in the bootstrap class loader)
 class from there.
 
+该模块由实现 Java 检测代理的单个类 io.opentelemetry.javaagent.OpenTelemetryAgent 组成。此类在应用程序启动期间由应用程序类加载器加载。它的唯一职责是将代理的类推入 JVM 的引导类加载器，并立即从那里委托给 io.opentelemetry.javaagent.bootstrap.AgentInitializer（现在在引导类加载器中）类。
+
 ## Modules that live in the bootstrap class loader
 
 ### `javaagent-bootstrap` module
 
 `io.opentelemetry.javaagent.bootstrap.AgentInitializer` and a few other classes that live in the bootstrap class
 loader but are not used directly by auto-instrumentation
+
+io.opentelemetry.javaagent.bootstrap.AgentInitializer 和其他一些存在于引导类加载器中但不直接被自动检测使用的类
 
 ### `instrumentation-api` and `javaagent-instrumentation-api` modules
 
@@ -37,8 +41,12 @@ module should be as small as possible and have as few dependencies as
 possible. Otherwise, there is a risk of accidentally exposing these classes to
 the actual application.
 
+这些模块包含用于稍后单独加载的实际检测的支持类。这些类应该可以从正在运行的应用程序中的所有可能的类加载器中获得。出于这个原因，javaagent 模块将所有这些类放入 JVM 的引导类加载器中。出于同样的原因，这个模块应该尽可能小并且依赖尽可能少。否则，存在将这些类意外暴露给实际应用程序的风险。
+
 `instrumentation-api` contains classes that are needed for both library and auto-instrumentation,
 while `javaagent-instrumentation-api` contains classes that are only needed for auto-instrumentation.
+
+nstrumentation-api 包含库和自动检测都需要的类，而 javaagent-instrumentation-api 包含只需要自动检测的类。
 
 ## Modules that live in the agent class loader
 
@@ -49,6 +57,8 @@ including integration with [ByteBuddy](https://bytebuddy.net/) and actual
 library-specific instrumentations. As these classes depend on many classes
 from different libraries, it is paramount to hide all these classes from the
 host application. This is achieved in the following way:
+
+包含使仪器机器工作所需的一切，包括与 ByteBuddy 和实际库特定仪器的集成。由于这些类依赖于来自不同库的许多类，因此对宿主应用程序隐藏所有这些类至关重要。这是通过以下方式实现的：
 
 - When `javaagent` module builds the final agent, it moves all classes from
 `instrumentation` submodules, `javaagent-tooling` and `javaagent-extension-api` modules
@@ -68,6 +78,8 @@ The complicated process above ensures that the majority of
 auto-instrumentation agent's classes are totally isolated from application
 classes, and an instrumented class from arbitrary classloader in JVM can
 still access helper classes from bootstrap classloader.
+
+上面复杂的过程确保了大多数自动检测代理的类与应用程序类完全隔离，并且来自 JVM 中任意类加载器的检测类仍然可以从引导类加载器访问辅助类。
 
 ### Agent jar structure
 
